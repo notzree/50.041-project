@@ -1,0 +1,91 @@
+syntax = "proto3";
+package kv.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/struct.proto";
+
+// --- Token Ring ---
+
+message Node {
+  string id = 1;
+  string address = 2; // host:port
+}
+
+message KvEvent {
+    enum Op {
+      OP_UNSPECIFIED = 0;
+        OP_PUT = 1;
+        OP_DELETE = 2;
+    }
+    Op op = 1;
+    string key = 2;
+    google.protobuf.Value value = 3; // null for deletes
+    uint64 seq = 4; //global sequence number
+}
+
+message Token {
+    string holder_id = 1;
+    uint64 log_offset = 2; // global seq of logs[0]
+    uint64 min_applied = 3; // minimum applied seq number, 1-indexed. 0 means applied nothing.
+    repeated KvEvent logs = 4;  // uncommitted log entries
+}
+
+// --- KV CRUD ---
+
+message GetRequest {
+  string key = 1 [(buf.validate.field).string.min_len = 1];
+}
+message GetResponse {
+  google.protobuf.Value value = 1;
+  bool found = 2;
+}
+
+message PutRequest {
+  string key = 1 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Value value = 2;
+}
+message PutResponse {}
+
+message DeleteRequest {
+  string key = 1 [(buf.validate.field).string.min_len = 1];
+}
+message DeleteResponse {}
+
+// --- Token Passing ---
+
+message PassTokenRequest {
+  Token token = 1;
+}
+message PassTokenResponse {}
+
+// --- Ring Management ---
+
+message JoinRequest {
+  Node node = 1;
+}
+message JoinResponse {
+  repeated Node ring = 1; // full ring so new node knows topology
+}
+
+message LeaveRequest {
+  string node_id = 1;
+}
+message LeaveResponse {}
+
+// --- Services ---
+
+service KvService {
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Put(PutRequest) returns (PutResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+service TokenService {
+  // called by predecessor to hand off the token
+  rpc PassToken(PassTokenRequest) returns (PassTokenResponse);
+}
+
+service RingService {
+  rpc Join(JoinRequest) returns (JoinResponse);
+  rpc Leave(LeaveRequest) returns (LeaveResponse);
+}
