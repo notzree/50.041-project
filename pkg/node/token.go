@@ -8,23 +8,23 @@ import (
 )
 
 type Token struct {
-	HolderID   string
+	HolderId   string
 	LogOffset  uint64
 	MinApplied uint64
-	Logs       []kv.KvEvent
+	Logs       []*kv.KvEvent
 }
 
-func TokenFromProto(pb *kvv1.Token) (Token, error) {
-	logs := make([]kv.KvEvent, 0, len(pb.GetLogs()))
+func TokenFromProto(pb *kvv1.Token) (*Token, error) {
+	logs := make([]*kv.KvEvent, 0, len(pb.GetLogs()))
 	for i, e := range pb.GetLogs() {
 		ev, err := kv.KvEventFromProto(e)
 		if err != nil {
-			return Token{}, fmt.Errorf("log entry %d: %w", i, err)
+			return nil, fmt.Errorf("log entry %d: %w", i, err)
 		}
 		logs = append(logs, ev)
 	}
-	return Token{
-		HolderID:   pb.GetHolderId(),
+	return &Token{
+		HolderId:   pb.GetHolderId(),
 		LogOffset:  pb.GetLogOffset(),
 		MinApplied: pb.GetMinApplied(),
 		Logs:       logs,
@@ -33,11 +33,16 @@ func TokenFromProto(pb *kvv1.Token) (Token, error) {
 
 func (t *Token) ToProto() *kvv1.Token {
 	logs := make([]*kvv1.KvEvent, len(t.Logs))
-	for i := range t.Logs {
-		logs[i] = t.Logs[i].ToProto()
+	for i, log := range t.Logs {
+		logs[i] = &kvv1.KvEvent{
+			Op:    log.Op.ToProto(),
+			Key:   log.Key,
+			Value: log.Value,
+			Seq:   uint64(i) + t.LogOffset,
+		}
 	}
 	return &kvv1.Token{
-		HolderId:   t.HolderID,
+		HolderId:   t.HolderId,
 		LogOffset:  t.LogOffset,
 		MinApplied: t.MinApplied,
 		Logs:       logs,

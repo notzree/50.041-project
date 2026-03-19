@@ -42,38 +42,94 @@ type KvEvent struct {
 	Op    Op
 	Key   string
 	Value *structpb.Value
-	Seq   uint64
 }
 
-func KvEventFromProto(pb *kvv1.KvEvent) (KvEvent, error) {
+func NewKvEvent(op Op, key string, value *structpb.Value) *KvEvent {
+	return &KvEvent{
+		op,
+		key,
+		value,
+	}
+}
+
+func KvEventFromProto(pb *kvv1.KvEvent) (*KvEvent, error) {
 	op, err := OpFromProto(pb.GetOp())
 	if err != nil {
-		return KvEvent{}, err
+		return nil, err
 	}
-	return KvEvent{
+	return &KvEvent{
 		Op:    op,
 		Key:   pb.GetKey(),
 		Value: pb.GetValue(),
-		Seq:   pb.GetSeq(),
 	}, nil
 }
 
-func (e *KvEvent) ToProto() *kvv1.KvEvent {
-	return &kvv1.KvEvent{
-		Op:    e.Op.ToProto(),
-		Key:   e.Key,
-		Value: e.Value,
-		Seq:   e.Seq,
-	}
-}
-
-type KvStore[K comparable, V any] struct {
+type KvStore struct {
 	mu    sync.RWMutex
-	store map[K]V
+	store map[string][]byte
 }
 
-func NewKvStore[K comparable, V any]() *KvStore[K, V] {
-	return &KvStore[K, V]{
-		store: make(map[K]V),
+func NewKvStore() *KvStore {
+	return &KvStore{
+		store: make(map[string][]byte),
 	}
+}
+
+// Put places a kv pair into the store. Returns true if it overwrote a value
+func (kv *KvStore) put(key string, value []byte) bool {
+	_, exist := kv.store[key]
+	kv.store[key] = value
+	return exist
+}
+
+// return true if key exist in kv
+func (kv *KvStore) delete(key string) bool {
+	if _, exist := kv.store[key]; !exist {
+		return false
+	}
+	delete(kv.store, key)
+	return true
+}
+
+func (kv *KvStore) get(key string) ([]byte, bool) {
+	value, exist := kv.store[key]
+	return value, exist
+}
+
+func (kv *KvStore) Put(key string, value []byte) bool {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	return kv.put(key, value)
+
+}
+
+func (kv *KvStore) Get(key string) ([]byte, bool) {
+	kv.mu.RLock()
+	defer kv.mu.RUnlock()
+	return kv.get(key)
+}
+func (kv *KvStore) Delete(key string) bool {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	return kv.delete(key)
+}
+
+// returns: count of events successfully applied, error
+func (kv *KvStore) ApplyLog(events []*KvEvent) (int, error) {
+	// lock once to avoid contention
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	for i, e := range events {
+		switch e.Op {
+		case OpPut:
+			valueJson, err := e.Value.MarshalJSON()
+			if err != nil {
+				return i, err
+			}
+			kv.put(e.Key, valueJson)
+		case OpDelete:
+			kv.delete(e.Key)
+		}
+	}
+	return len(events), nil
 }

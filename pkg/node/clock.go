@@ -23,12 +23,12 @@ func NewLamportTimestamp(timeargs ...int) *LamportTimestamp {
 }
 
 // Recv will update self to get the latest timestamp.
-
 func (self *LamportTimestamp) Recv(other int) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 	self.time = max(self.time, other) + 1
 }
+
 func (self *LamportTimestamp) Val() int {
 	self.mu.Lock()
 	defer self.mu.Unlock()
