@@ -53,10 +53,10 @@ message DeleteResponse {}
 
 // --- Token Passing ---
 
-message PassTokenRequest {
+message ReceiveTokenRequest {
   Token token = 1;
 }
-message PassTokenResponse {}
+message ReceiveTokenResponse {}
 
 // --- Ring Management ---
 
@@ -82,7 +82,7 @@ service KvService {
 
 service TokenService {
   // called by predecessor to hand off the token
-  rpc PassToken(PassTokenRequest) returns (PassTokenResponse);
+  rpc ReceiveToken(ReceiveTokenRequest) returns (ReceiveTokenResponse);
 }
 
 service RingService {

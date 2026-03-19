@@ -43,8 +43,9 @@ const (
 	KvServicePutProcedure = "/kv.v1.KvService/Put"
 	// KvServiceDeleteProcedure is the fully-qualified name of the KvService's Delete RPC.
 	KvServiceDeleteProcedure = "/kv.v1.KvService/Delete"
-	// TokenServicePassTokenProcedure is the fully-qualified name of the TokenService's PassToken RPC.
-	TokenServicePassTokenProcedure = "/kv.v1.TokenService/PassToken"
+	// TokenServiceReceiveTokenProcedure is the fully-qualified name of the TokenService's ReceiveToken
+	// RPC.
+	TokenServiceReceiveTokenProcedure = "/kv.v1.TokenService/ReceiveToken"
 	// RingServiceJoinProcedure is the fully-qualified name of the RingService's Join RPC.
 	RingServiceJoinProcedure = "/kv.v1.RingService/Join"
 	// RingServiceLeaveProcedure is the fully-qualified name of the RingService's Leave RPC.
@@ -188,7 +189,7 @@ func (UnimplementedKvServiceHandler) Delete(context.Context, *v1.DeleteRequest) 
 // TokenServiceClient is a client for the kv.v1.TokenService service.
 type TokenServiceClient interface {
 	// called by predecessor to hand off the token
-	PassToken(context.Context, *v1.PassTokenRequest) (*v1.PassTokenResponse, error)
+	ReceiveToken(context.Context, *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error)
 }
 
 // NewTokenServiceClient constructs a client for the kv.v1.TokenService service. By default, it uses
@@ -202,10 +203,10 @@ func NewTokenServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 	baseURL = strings.TrimRight(baseURL, "/")
 	tokenServiceMethods := v1.File_kv_v1_kv_proto.Services().ByName("TokenService").Methods()
 	return &tokenServiceClient{
-		passToken: connect.NewClient[v1.PassTokenRequest, v1.PassTokenResponse](
+		receiveToken: connect.NewClient[v1.ReceiveTokenRequest, v1.ReceiveTokenResponse](
 			httpClient,
-			baseURL+TokenServicePassTokenProcedure,
-			connect.WithSchema(tokenServiceMethods.ByName("PassToken")),
+			baseURL+TokenServiceReceiveTokenProcedure,
+			connect.WithSchema(tokenServiceMethods.ByName("ReceiveToken")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -213,12 +214,12 @@ func NewTokenServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // tokenServiceClient implements TokenServiceClient.
 type tokenServiceClient struct {
-	passToken *connect.Client[v1.PassTokenRequest, v1.PassTokenResponse]
+	receiveToken *connect.Client[v1.ReceiveTokenRequest, v1.ReceiveTokenResponse]
 }
 
-// PassToken calls kv.v1.TokenService.PassToken.
-func (c *tokenServiceClient) PassToken(ctx context.Context, req *v1.PassTokenRequest) (*v1.PassTokenResponse, error) {
-	response, err := c.passToken.CallUnary(ctx, connect.NewRequest(req))
+// ReceiveToken calls kv.v1.TokenService.ReceiveToken.
+func (c *tokenServiceClient) ReceiveToken(ctx context.Context, req *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error) {
+	response, err := c.receiveToken.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
 		return response.Msg, err
 	}
@@ -228,7 +229,7 @@ func (c *tokenServiceClient) PassToken(ctx context.Context, req *v1.PassTokenReq
 // TokenServiceHandler is an implementation of the kv.v1.TokenService service.
 type TokenServiceHandler interface {
 	// called by predecessor to hand off the token
-	PassToken(context.Context, *v1.PassTokenRequest) (*v1.PassTokenResponse, error)
+	ReceiveToken(context.Context, *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error)
 }
 
 // NewTokenServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -238,16 +239,16 @@ type TokenServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	tokenServiceMethods := v1.File_kv_v1_kv_proto.Services().ByName("TokenService").Methods()
-	tokenServicePassTokenHandler := connect.NewUnaryHandlerSimple(
-		TokenServicePassTokenProcedure,
-		svc.PassToken,
-		connect.WithSchema(tokenServiceMethods.ByName("PassToken")),
+	tokenServiceReceiveTokenHandler := connect.NewUnaryHandlerSimple(
+		TokenServiceReceiveTokenProcedure,
+		svc.ReceiveToken,
+		connect.WithSchema(tokenServiceMethods.ByName("ReceiveToken")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/kv.v1.TokenService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case TokenServicePassTokenProcedure:
-			tokenServicePassTokenHandler.ServeHTTP(w, r)
+		case TokenServiceReceiveTokenProcedure:
+			tokenServiceReceiveTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -257,8 +258,8 @@ func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedTokenServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTokenServiceHandler struct{}
 
-func (UnimplementedTokenServiceHandler) PassToken(context.Context, *v1.PassTokenRequest) (*v1.PassTokenResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.TokenService.PassToken is not implemented"))
+func (UnimplementedTokenServiceHandler) ReceiveToken(context.Context, *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.TokenService.ReceiveToken is not implemented"))
 }
 
 // RingServiceClient is a client for the kv.v1.RingService service.

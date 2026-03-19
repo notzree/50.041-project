@@ -524,27 +524,27 @@ func (*DeleteResponse) Descriptor() ([]byte, []int) {
 	return file_kv_v1_kv_proto_rawDescGZIP(), []int{8}
 }
 
-type PassTokenRequest struct {
+type ReceiveTokenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         *Token                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PassTokenRequest) Reset() {
-	*x = PassTokenRequest{}
+func (x *ReceiveTokenRequest) Reset() {
+	*x = ReceiveTokenRequest{}
 	mi := &file_kv_v1_kv_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PassTokenRequest) String() string {
+func (x *ReceiveTokenRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PassTokenRequest) ProtoMessage() {}
+func (*ReceiveTokenRequest) ProtoMessage() {}
 
-func (x *PassTokenRequest) ProtoReflect() protoreflect.Message {
+func (x *ReceiveTokenRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_kv_v1_kv_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -556,38 +556,38 @@ func (x *PassTokenRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PassTokenRequest.ProtoReflect.Descriptor instead.
-func (*PassTokenRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ReceiveTokenRequest.ProtoReflect.Descriptor instead.
+func (*ReceiveTokenRequest) Descriptor() ([]byte, []int) {
 	return file_kv_v1_kv_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *PassTokenRequest) GetToken() *Token {
+func (x *ReceiveTokenRequest) GetToken() *Token {
 	if x != nil {
 		return x.Token
 	}
 	return nil
 }
 
-type PassTokenResponse struct {
+type ReceiveTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *PassTokenResponse) Reset() {
-	*x = PassTokenResponse{}
+func (x *ReceiveTokenResponse) Reset() {
+	*x = ReceiveTokenResponse{}
 	mi := &file_kv_v1_kv_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *PassTokenResponse) String() string {
+func (x *ReceiveTokenResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PassTokenResponse) ProtoMessage() {}
+func (*ReceiveTokenResponse) ProtoMessage() {}
 
-func (x *PassTokenResponse) ProtoReflect() protoreflect.Message {
+func (x *ReceiveTokenResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_kv_v1_kv_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -599,8 +599,8 @@ func (x *PassTokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PassTokenResponse.ProtoReflect.Descriptor instead.
-func (*PassTokenResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ReceiveTokenResponse.ProtoReflect.Descriptor instead.
+func (*ReceiveTokenResponse) Descriptor() ([]byte, []int) {
 	return file_kv_v1_kv_proto_rawDescGZIP(), []int{10}
 }
 
@@ -810,10 +810,10 @@ const file_kv_v1_kv_proto_rawDesc = "" +
 	"\vPutResponse\"*\n" +
 	"\rDeleteRequest\x12\x19\n" +
 	"\x03key\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x03key\"\x10\n" +
-	"\x0eDeleteResponse\"6\n" +
-	"\x10PassTokenRequest\x12\"\n" +
-	"\x05token\x18\x01 \x01(\v2\f.kv.v1.TokenR\x05token\"\x13\n" +
-	"\x11PassTokenResponse\".\n" +
+	"\x0eDeleteResponse\"9\n" +
+	"\x13ReceiveTokenRequest\x12\"\n" +
+	"\x05token\x18\x01 \x01(\v2\f.kv.v1.TokenR\x05token\"\x16\n" +
+	"\x14ReceiveTokenResponse\".\n" +
 	"\vJoinRequest\x12\x1f\n" +
 	"\x04node\x18\x01 \x01(\v2\v.kv.v1.NodeR\x04node\"/\n" +
 	"\fJoinResponse\x12\x1f\n" +
@@ -824,9 +824,9 @@ const file_kv_v1_kv_proto_rawDesc = "" +
 	"\tKvService\x12,\n" +
 	"\x03Get\x12\x11.kv.v1.GetRequest\x1a\x12.kv.v1.GetResponse\x12,\n" +
 	"\x03Put\x12\x11.kv.v1.PutRequest\x1a\x12.kv.v1.PutResponse\x125\n" +
-	"\x06Delete\x12\x14.kv.v1.DeleteRequest\x1a\x15.kv.v1.DeleteResponse2N\n" +
-	"\fTokenService\x12>\n" +
-	"\tPassToken\x12\x17.kv.v1.PassTokenRequest\x1a\x18.kv.v1.PassTokenResponse2r\n" +
+	"\x06Delete\x12\x14.kv.v1.DeleteRequest\x1a\x15.kv.v1.DeleteResponse2W\n" +
+	"\fTokenService\x12G\n" +
+	"\fReceiveToken\x12\x1a.kv.v1.ReceiveTokenRequest\x1a\x1b.kv.v1.ReceiveTokenResponse2r\n" +
 	"\vRingService\x12/\n" +
 	"\x04Join\x12\x12.kv.v1.JoinRequest\x1a\x13.kv.v1.JoinResponse\x122\n" +
 	"\x05Leave\x12\x13.kv.v1.LeaveRequest\x1a\x14.kv.v1.LeaveResponseBc\n" +
@@ -847,23 +847,23 @@ func file_kv_v1_kv_proto_rawDescGZIP() []byte {
 var file_kv_v1_kv_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_kv_v1_kv_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_kv_v1_kv_proto_goTypes = []any{
-	(KvEvent_Op)(0),           // 0: kv.v1.KvEvent.Op
-	(*Node)(nil),              // 1: kv.v1.Node
-	(*KvEvent)(nil),           // 2: kv.v1.KvEvent
-	(*Token)(nil),             // 3: kv.v1.Token
-	(*GetRequest)(nil),        // 4: kv.v1.GetRequest
-	(*GetResponse)(nil),       // 5: kv.v1.GetResponse
-	(*PutRequest)(nil),        // 6: kv.v1.PutRequest
-	(*PutResponse)(nil),       // 7: kv.v1.PutResponse
-	(*DeleteRequest)(nil),     // 8: kv.v1.DeleteRequest
-	(*DeleteResponse)(nil),    // 9: kv.v1.DeleteResponse
-	(*PassTokenRequest)(nil),  // 10: kv.v1.PassTokenRequest
-	(*PassTokenResponse)(nil), // 11: kv.v1.PassTokenResponse
-	(*JoinRequest)(nil),       // 12: kv.v1.JoinRequest
-	(*JoinResponse)(nil),      // 13: kv.v1.JoinResponse
-	(*LeaveRequest)(nil),      // 14: kv.v1.LeaveRequest
-	(*LeaveResponse)(nil),     // 15: kv.v1.LeaveResponse
-	(*structpb.Value)(nil),    // 16: google.protobuf.Value
+	(KvEvent_Op)(0),              // 0: kv.v1.KvEvent.Op
+	(*Node)(nil),                 // 1: kv.v1.Node
+	(*KvEvent)(nil),              // 2: kv.v1.KvEvent
+	(*Token)(nil),                // 3: kv.v1.Token
+	(*GetRequest)(nil),           // 4: kv.v1.GetRequest
+	(*GetResponse)(nil),          // 5: kv.v1.GetResponse
+	(*PutRequest)(nil),           // 6: kv.v1.PutRequest
+	(*PutResponse)(nil),          // 7: kv.v1.PutResponse
+	(*DeleteRequest)(nil),        // 8: kv.v1.DeleteRequest
+	(*DeleteResponse)(nil),       // 9: kv.v1.DeleteResponse
+	(*ReceiveTokenRequest)(nil),  // 10: kv.v1.ReceiveTokenRequest
+	(*ReceiveTokenResponse)(nil), // 11: kv.v1.ReceiveTokenResponse
+	(*JoinRequest)(nil),          // 12: kv.v1.JoinRequest
+	(*JoinResponse)(nil),         // 13: kv.v1.JoinResponse
+	(*LeaveRequest)(nil),         // 14: kv.v1.LeaveRequest
+	(*LeaveResponse)(nil),        // 15: kv.v1.LeaveResponse
+	(*structpb.Value)(nil),       // 16: google.protobuf.Value
 }
 var file_kv_v1_kv_proto_depIdxs = []int32{
 	0,  // 0: kv.v1.KvEvent.op:type_name -> kv.v1.KvEvent.Op
@@ -871,19 +871,19 @@ var file_kv_v1_kv_proto_depIdxs = []int32{
 	2,  // 2: kv.v1.Token.logs:type_name -> kv.v1.KvEvent
 	16, // 3: kv.v1.GetResponse.value:type_name -> google.protobuf.Value
 	16, // 4: kv.v1.PutRequest.value:type_name -> google.protobuf.Value
-	3,  // 5: kv.v1.PassTokenRequest.token:type_name -> kv.v1.Token
+	3,  // 5: kv.v1.ReceiveTokenRequest.token:type_name -> kv.v1.Token
 	1,  // 6: kv.v1.JoinRequest.node:type_name -> kv.v1.Node
 	1,  // 7: kv.v1.JoinResponse.ring:type_name -> kv.v1.Node
 	4,  // 8: kv.v1.KvService.Get:input_type -> kv.v1.GetRequest
 	6,  // 9: kv.v1.KvService.Put:input_type -> kv.v1.PutRequest
 	8,  // 10: kv.v1.KvService.Delete:input_type -> kv.v1.DeleteRequest
-	10, // 11: kv.v1.TokenService.PassToken:input_type -> kv.v1.PassTokenRequest
+	10, // 11: kv.v1.TokenService.ReceiveToken:input_type -> kv.v1.ReceiveTokenRequest
 	12, // 12: kv.v1.RingService.Join:input_type -> kv.v1.JoinRequest
 	14, // 13: kv.v1.RingService.Leave:input_type -> kv.v1.LeaveRequest
 	5,  // 14: kv.v1.KvService.Get:output_type -> kv.v1.GetResponse
 	7,  // 15: kv.v1.KvService.Put:output_type -> kv.v1.PutResponse
 	9,  // 16: kv.v1.KvService.Delete:output_type -> kv.v1.DeleteResponse
-	11, // 17: kv.v1.TokenService.PassToken:output_type -> kv.v1.PassTokenResponse
+	11, // 17: kv.v1.TokenService.ReceiveToken:output_type -> kv.v1.ReceiveTokenResponse
 	13, // 18: kv.v1.RingService.Join:output_type -> kv.v1.JoinResponse
 	15, // 19: kv.v1.RingService.Leave:output_type -> kv.v1.LeaveResponse
 	14, // [14:20] is the sub-list for method output_type
