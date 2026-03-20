@@ -21,9 +21,10 @@ type PendingEvent struct {
 }
 
 type Node struct {
-	Id   string
-	addr string
-	kv   *kv.KvStore
+	Id       string
+	addr     string
+	kv       *kv.KvStore
+	registry *Registry
 	// Zero Value if Node has never participated in an event
 	timestamp     LamportTimestamp
 	lastApplied   uint64
@@ -31,16 +32,21 @@ type Node struct {
 	pendingEvents chan *PendingEvent
 }
 
-func NewNode(Id string, addr string, maxFlushCapacity int) *Node {
+func NewNode(Id string, addr string, maxFlushCapacity int, ring []PeerConfig) (*Node, error) {
+	registry, err := NewRegistry(Id, ring)
+	if err != nil {
+		return nil, err
+	}
 	return &Node{
 		Id:   Id,
 		addr: addr,
 		// todo: persistence upon crash recovery
 		kv:            kv.NewKvStore(),
+		registry:      registry,
 		timestamp:     *NewLamportTimestamp(),
 		token:         make(chan *Token, 1),
 		pendingEvents: make(chan *PendingEvent, maxFlushCapacity),
-	}
+	}, nil
 }
 
 // Start registers all services, starts the background token loop, and serves HTTP.
@@ -62,6 +68,14 @@ func (n *Node) Start(ctx context.Context) error {
 
 	// start background token loop
 	go n.executeWithDistributedMutex(ctx)
+
+	// the node with the lowest ID initiates the token
+	if n.registry.selfIdx == 0 {
+		n.token <- &Token{
+			HolderId: n.Id,
+			Logs:     make([]*kv.KvEvent, 0),
+		}
+	}
 
 	// run server in a goroutine so we can wait on ctx
 	errCh := make(chan error, 1)
@@ -104,10 +118,24 @@ func (n *Node) executeWithDistributedMutex(ctx context.Context) {
 					break drainLoop
 				}
 			}
-			n.passToken()
+			err := n.passToken(ctx, token)
+			if err != nil {
+				// TODO: error recovery code here
+				log.Printf("warn: failed to pass token to next node: %v\n", err)
+			}
 		}
 	}
+}
 
+func (n *Node) passToken(ctx context.Context, token *Token) error {
+	nextNode := n.registry.Next()
+	_, err := nextNode.Client.ReceiveToken(ctx, &kvv1.ReceiveTokenRequest{
+		Token: token.ToProto(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to pass token to next client: %w", err)
+	}
+	return nil
 }
 
 // Implement kv.v1.TokenService
@@ -128,7 +156,7 @@ func (n *Node) ReceiveToken(ctx context.Context, req *kvv1.ReceiveTokenRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token from proto: %w", err)
 	}
-
+	preReplayLastApplied := n.lastApplied
 	// replay only the log entries we haven't applied yet
 	startIdx := n.lastApplied - token.LogOffset
 	unseenLogs := token.Logs[startIdx:]
@@ -136,6 +164,12 @@ func (n *Node) ReceiveToken(ctx context.Context, req *kvv1.ReceiveTokenRequest) 
 	// even on replay error, we still try to recover from partial failures, and continue the ring
 	if applied > 0 {
 		n.lastApplied = token.LogOffset + startIdx + uint64(applied)
+	}
+	token.MinApplied = min(token.MinApplied, preReplayLastApplied)
+	// compact: trim log entries that all nodes have applied
+	if trimCount := token.MinApplied - token.LogOffset; trimCount > 0 {
+		token.Logs = token.Logs[trimCount:]
+		token.LogOffset = token.MinApplied
 	}
 	// should not block if everything is correct
 	n.token <- token
