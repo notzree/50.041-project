@@ -138,24 +138,16 @@ func (n *Node) passToken(ctx context.Context, token *Token) error {
 	return nil
 }
 
-// Implement kv.v1.TokenService
-// the current token holder calls the ReceiveToken method on the next node
-// to pass their current token onto the next node
-func (n *Node) ReceiveToken(ctx context.Context, req *kvv1.ReceiveTokenRequest) (*kvv1.ReceiveTokenResponse, error) {
-	// TODO: figure out token compaction here!!!
-	// validate that the incoming token is in-fact logically AFTER!
-	// If our lamport timestamp is ahead of the token, drop it, and warn.
-	incomingTimestamp := int(req.Token.LogOffset) + len(req.Token.Logs)
+// handleIncomingToken validates, replays unseen logs, and compacts the token.
+// Returns error if token is stale or replay fails partially.
+func (n *Node) handleIncomingToken(token *Token) error {
+	incomingTimestamp := int(token.LogOffset) + len(token.Logs)
 	timestampVal := n.timestamp.Val()
 	if timestampVal > incomingTimestamp {
-		log.Println("warn: ignoring token with smaller lamport timestamp")
-		return nil, fmt.Errorf("received token with timestamp: %v that is not ahead of this node: %v with timestamp: %v", incomingTimestamp, n.Id, n.timestamp.Val())
+		return fmt.Errorf("received token with timestamp: %v that is not ahead of this node: %v with timestamp: %v", incomingTimestamp, n.Id, n.timestamp.Val())
 	}
 	n.timestamp.Recv(incomingTimestamp)
-	token, err := TokenFromProto(req.Token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse token from proto: %w", err)
-	}
+
 	preReplayLastApplied := n.lastApplied
 	// replay only the log entries we haven't applied yet
 	startIdx := n.lastApplied - token.LogOffset
@@ -174,8 +166,19 @@ func (n *Node) ReceiveToken(ctx context.Context, req *kvv1.ReceiveTokenRequest) 
 	// should not block if everything is correct
 	n.token <- token
 
+	return err
+}
+
+// Implement kv.v1.TokenService
+// the current token holder calls the ReceiveToken method on the next node
+// to pass their current token onto the next node
+func (n *Node) ReceiveToken(ctx context.Context, req *kvv1.ReceiveTokenRequest) (*kvv1.ReceiveTokenResponse, error) {
+	token, err := TokenFromProto(req.Token)
 	if err != nil {
-		log.Printf("warn: replay error... continuing with token transmission: %v \n", err)
+		return nil, fmt.Errorf("failed to parse token from proto: %w", err)
+	}
+	if err := n.handleIncomingToken(token); err != nil {
+		log.Printf("warn: handleIncomingToken error: %v\n", err)
 		return &kvv1.ReceiveTokenResponse{}, nil
 	}
 	return &kvv1.ReceiveTokenResponse{}, nil
