@@ -11,6 +11,7 @@ type Token struct {
 	HolderId   string
 	LogOffset  uint64
 	MinApplied uint64
+	Timestamp  uint64
 	Logs       []*kv.KvEvent
 }
 
@@ -27,6 +28,7 @@ func TokenFromProto(pb *kvv1.Token) (*Token, error) {
 		HolderId:   pb.GetHolderId(),
 		LogOffset:  pb.GetLogOffset(),
 		MinApplied: pb.GetMinApplied(),
+		Timestamp:  pb.GetTimestamp(),
 		Logs:       logs,
 	}, nil
 }
@@ -45,6 +47,7 @@ func (t *Token) ToProto() *kvv1.Token {
 		HolderId:   t.HolderId,
 		LogOffset:  t.LogOffset,
 		MinApplied: t.MinApplied,
+		Timestamp:  t.Timestamp,
 		Logs:       logs,
 	}
 }

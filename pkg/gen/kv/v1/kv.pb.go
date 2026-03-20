@@ -198,6 +198,7 @@ type Token struct {
 	LogOffset     uint64                 `protobuf:"varint,2,opt,name=log_offset,json=logOffset,proto3" json:"log_offset,omitempty"`    // global seq of logs[0]
 	MinApplied    uint64                 `protobuf:"varint,3,opt,name=min_applied,json=minApplied,proto3" json:"min_applied,omitempty"` // minimum applied seq number, 1-indexed. 0 means applied nothing.
 	Logs          []*KvEvent             `protobuf:"bytes,4,rep,name=logs,proto3" json:"logs,omitempty"`                                // uncommitted log entries
+	Timestamp     uint64                 `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                     // lamport timestamp, updated by each node before passing
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -258,6 +259,13 @@ func (x *Token) GetLogs() []*KvEvent {
 		return x.Logs
 	}
 	return nil
+}
+
+func (x *Token) GetTimestamp() uint64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
 }
 
 type GetRequest struct {
@@ -789,14 +797,15 @@ const file_kv_v1_kv_proto_rawDesc = "" +
 	"\x0eOP_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
 	"\x06OP_PUT\x10\x01\x12\r\n" +
-	"\tOP_DELETE\x10\x02\"\x88\x01\n" +
+	"\tOP_DELETE\x10\x02\"\xa6\x01\n" +
 	"\x05Token\x12\x1b\n" +
 	"\tholder_id\x18\x01 \x01(\tR\bholderId\x12\x1d\n" +
 	"\n" +
 	"log_offset\x18\x02 \x01(\x04R\tlogOffset\x12\x1f\n" +
 	"\vmin_applied\x18\x03 \x01(\x04R\n" +
 	"minApplied\x12\"\n" +
-	"\x04logs\x18\x04 \x03(\v2\x0e.kv.v1.KvEventR\x04logs\"'\n" +
+	"\x04logs\x18\x04 \x03(\v2\x0e.kv.v1.KvEventR\x04logs\x12\x1c\n" +
+	"\ttimestamp\x18\x05 \x01(\x04R\ttimestamp\"'\n" +
 	"\n" +
 	"GetRequest\x12\x19\n" +
 	"\x03key\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x03key\"Q\n" +

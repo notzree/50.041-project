@@ -2,13 +2,18 @@ package node
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	kvv1 "ds/v2/pkg/gen/kv/v1"
 	"ds/v2/pkg/gen/kv/v1/kvv1connect"
 	"ds/v2/pkg/kv"
 	"errors"
-	"fmt"
-	"log"
-	"net/http"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -23,23 +28,28 @@ type PendingEvent struct {
 type Node struct {
 	Id       string
 	addr     string
+	manual   bool
+	hasToken atomic.Bool
 	kv       *kv.KvStore
 	registry *Registry
 	// Zero Value if Node has never participated in an event
-	timestamp     LamportTimestamp
-	lastApplied   uint64
+	timestamp   LamportTimestamp
+	lastApplied atomic.Uint64
+	// tokenMu serializes token processing (handleIncomingToken / handleTick)
+	tokenMu       sync.Mutex
 	token         chan *Token
 	pendingEvents chan *PendingEvent
 }
 
-func NewNode(Id string, addr string, maxFlushCapacity int, ring []PeerConfig) (*Node, error) {
+func NewNode(Id string, addr string, maxFlushCapacity int, ring []PeerConfig, manual bool) (*Node, error) {
 	registry, err := NewRegistry(Id, ring)
 	if err != nil {
 		return nil, err
 	}
 	return &Node{
-		Id:   Id,
-		addr: addr,
+		Id:     Id,
+		addr:   addr,
+		manual: manual,
 		// todo: persistence upon crash recovery
 		kv:            kv.NewKvStore(),
 		registry:      registry,
@@ -61,16 +71,23 @@ func (n *Node) Start(ctx context.Context) error {
 	mux.Handle(tokenPath, tokenHandler)
 	mux.Handle(ringPath, ringHandler)
 
+	// REST endpoints for manual testing
+	mux.HandleFunc("/tick", n.handleTick)
+	mux.HandleFunc("/status", n.handleStatus)
+
 	srv := &http.Server{
 		Addr:    n.addr,
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	// start background token loop
-	go n.executeWithDistributedMutex(ctx)
+	// in auto mode, start the background token loop
+	if !n.manual {
+		go n.executeWithDistributedMutex(ctx)
+	}
 
 	// the node with the lowest ID initiates the token
 	if n.registry.selfIdx == 0 {
+		n.hasToken.Store(true)
 		n.token <- &Token{
 			HolderId: n.Id,
 			Logs:     make([]*kv.KvEvent, 0),
@@ -93,6 +110,29 @@ func (n *Node) Start(ctx context.Context) error {
 	}
 }
 
+// drainPendingInto drains all pending events into the token's log.
+// Returns the number of events flushed.
+func (n *Node) drainPendingInto(token *Token) int {
+	flushed := 0
+	for {
+		select {
+		case pe := <-n.pendingEvents:
+			token.Logs = append(token.Logs, pe.Event)
+			n.lastApplied.Add(1)
+			pe.Done <- nil
+			flushed++
+		default:
+			return flushed
+		}
+	}
+}
+
+// storeToken puts the token back into the node's channel and marks it as held.
+func (n *Node) storeToken(token *Token) {
+	n.hasToken.Store(true)
+	n.token <- token
+}
+
 // executeWithDistributedMutex should be spun up from within a goroutine
 func (n *Node) executeWithDistributedMutex(ctx context.Context) {
 	for {
@@ -107,27 +147,22 @@ func (n *Node) executeWithDistributedMutex(ctx context.Context) {
 				}
 			}
 		case token := <-n.token:
-		drainLoop:
-			for {
-				select {
-				case pe := <-n.pendingEvents:
-					token.Logs = append(token.Logs, pe.Event)
-					n.lastApplied++
-					pe.Done <- nil
-				default:
-					break drainLoop
-				}
-			}
+			n.drainPendingInto(token)
 			err := n.passToken(ctx, token)
 			if err != nil {
-				// TODO: error recovery code here
-				log.Printf("warn: failed to pass token to next node: %v\n", err)
+				log.Printf("warn: failed to pass token, retrying: %v\n", err)
+				n.storeToken(token)
+				time.Sleep(time.Second)
 			}
 		}
 	}
 }
 
 func (n *Node) passToken(ctx context.Context, token *Token) error {
+	n.hasToken.Store(false)
+	// stamp the token with our current Lamport time before sending
+	token.Timestamp = uint64(n.timestamp.Tick())
+
 	nextNode := n.registry.Next()
 	_, err := nextNode.Client.ReceiveToken(ctx, &kvv1.ReceiveTokenRequest{
 		Token: token.ToProto(),
@@ -141,21 +176,22 @@ func (n *Node) passToken(ctx context.Context, token *Token) error {
 // handleIncomingToken validates, replays unseen logs, and compacts the token.
 // Returns error if token is stale or replay fails partially.
 func (n *Node) handleIncomingToken(token *Token) error {
-	incomingTimestamp := int(token.LogOffset) + len(token.Logs)
-	timestampVal := n.timestamp.Val()
-	if timestampVal > incomingTimestamp {
-		return fmt.Errorf("received token with timestamp: %v that is not ahead of this node: %v with timestamp: %v", incomingTimestamp, n.Id, n.timestamp.Val())
-	}
-	n.timestamp.Recv(incomingTimestamp)
+	n.tokenMu.Lock()
+	defer n.tokenMu.Unlock()
 
-	preReplayLastApplied := n.lastApplied
+	// atomically check-and-update: reject stale tokens
+	if _, ok := n.timestamp.RecvIfNewer(int(token.Timestamp)); !ok {
+		return fmt.Errorf("stale token: token timestamp %d < node %s timestamp %d", token.Timestamp, n.Id, n.timestamp.Val())
+	}
+
+	preReplayLastApplied := n.lastApplied.Load()
 	// replay only the log entries we haven't applied yet
-	startIdx := n.lastApplied - token.LogOffset
+	startIdx := preReplayLastApplied - token.LogOffset
 	unseenLogs := token.Logs[startIdx:]
 	applied, err := n.kv.ApplyLog(unseenLogs)
 	// even on replay error, we still try to recover from partial failures, and continue the ring
 	if applied > 0 {
-		n.lastApplied = token.LogOffset + startIdx + uint64(applied)
+		n.lastApplied.Store(token.LogOffset + startIdx + uint64(applied))
 	}
 	token.MinApplied = min(token.MinApplied, preReplayLastApplied)
 	// compact: trim log entries that all nodes have applied
@@ -163,8 +199,7 @@ func (n *Node) handleIncomingToken(token *Token) error {
 		token.Logs = token.Logs[trimCount:]
 		token.LogOffset = token.MinApplied
 	}
-	// should not block if everything is correct
-	n.token <- token
+	n.storeToken(token)
 
 	return err
 }
@@ -265,4 +300,55 @@ func (n *Node) Delete(ctx context.Context, req *kvv1.DeleteRequest) (*kvv1.Delet
 	_ = n.kv.Delete(req.Key)
 
 	return &kvv1.DeleteResponse{}, nil
+}
+
+// handleTick is a REST endpoint (POST /tick) that manually advances the token.
+// If this node holds the token, it drains pending events and passes the token.
+// If not, it's a no-op. This allows sending tick to all nodes — only the holder acts.
+func (n *Node) handleTick(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	select {
+	case token := <-n.token:
+		flushed := n.drainPendingInto(token)
+
+		passedTo := n.registry.Next().Id
+		err := n.passToken(r.Context(), token)
+		if err != nil {
+			n.storeToken(token)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]any{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]any{
+			"held":           true,
+			"passed_to":      passedTo,
+			"events_flushed": flushed,
+			"log_length":     len(token.Logs),
+		})
+	default:
+		json.NewEncoder(w).Encode(map[string]any{
+			"held": false,
+		})
+	}
+}
+
+// handleStatus is a REST endpoint (GET /status) returning node state.
+func (n *Node) handleStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"id":           n.Id,
+		"has_token":    n.hasToken.Load(),
+		"last_applied": n.lastApplied.Load(),
+		"timestamp":    n.timestamp.Val(),
+		"manual":       n.manual,
+	})
 }

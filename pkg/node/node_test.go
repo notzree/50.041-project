@@ -24,12 +24,13 @@ func newTestNode(id string) *Node {
 func TestHandleIncomingToken_ReplaysUnseenLogs(t *testing.T) {
 	n := newTestNode("n1")
 	// Simulate that the node has already applied events 0 and 1
-	n.lastApplied = 2
+	n.lastApplied.Store(2)
 
 	token := &Token{
 		HolderId:   "n0",
 		LogOffset:  0,
 		MinApplied: 10, // high so no compaction interferes
+		Timestamp:  1,  // valid: ahead of node's 0
 		Logs: []*kv.KvEvent{
 			kv.NewKvEvent(kv.OpPut, "already-seen-0", structpb.NewStringValue("x")),
 			kv.NewKvEvent(kv.OpPut, "already-seen-1", structpb.NewStringValue("x")),
@@ -48,7 +49,7 @@ func TestHandleIncomingToken_ReplaysUnseenLogs(t *testing.T) {
 	require.True(t, ok)
 	assert.Contains(t, string(val), "hello")
 
-	assert.Equal(t, uint64(3), n.lastApplied)
+	assert.Equal(t, uint64(3), n.lastApplied.Load())
 
 	// drain token channel
 	<-n.token
@@ -56,12 +57,13 @@ func TestHandleIncomingToken_ReplaysUnseenLogs(t *testing.T) {
 
 func TestHandleIncomingToken_RejectsStaleToken(t *testing.T) {
 	n := newTestNode("n1")
-	// Set the node's timestamp ahead
-	n.timestamp.Recv(100)
+	// Advance node's Lamport clock ahead of the token
+	n.timestamp.Recv(10) // node timestamp = 11
 
 	token := &Token{
 		HolderId:  "n0",
 		LogOffset: 0,
+		Timestamp: 5, // behind node's 11 → stale
 		Logs: []*kv.KvEvent{
 			kv.NewKvEvent(kv.OpPut, "k", structpb.NewStringValue("v")),
 		},
@@ -69,7 +71,7 @@ func TestHandleIncomingToken_RejectsStaleToken(t *testing.T) {
 
 	err := n.handleIncomingToken(token)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not ahead of this node")
+	assert.Contains(t, err.Error(), "stale token")
 
 	// Token channel should be empty — stale token not forwarded
 	select {
@@ -81,12 +83,13 @@ func TestHandleIncomingToken_RejectsStaleToken(t *testing.T) {
 
 func TestHandleIncomingToken_Compaction(t *testing.T) {
 	n := newTestNode("n1")
-	n.lastApplied = 5
+	n.lastApplied.Store(5)
 
 	token := &Token{
 		HolderId:   "n0",
 		LogOffset:  3,
 		MinApplied: 10, // higher than LogOffset+len(Logs), so will compact based on preReplayLastApplied
+		Timestamp:  1,
 		Logs: []*kv.KvEvent{
 			kv.NewKvEvent(kv.OpPut, "e3", structpb.NewStringValue("v3")),
 			kv.NewKvEvent(kv.OpPut, "e4", structpb.NewStringValue("v4")),
@@ -110,12 +113,13 @@ func TestHandleIncomingToken_Compaction(t *testing.T) {
 
 func TestHandleIncomingToken_MinAppliedUpdated(t *testing.T) {
 	n := newTestNode("n1")
-	n.lastApplied = 3
+	n.lastApplied.Store(3)
 
 	token := &Token{
 		HolderId:   "n0",
 		LogOffset:  0,
 		MinApplied: 100, // artificially high
+		Timestamp:  1,
 		Logs: []*kv.KvEvent{
 			kv.NewKvEvent(kv.OpPut, "e0", structpb.NewStringValue("v")),
 			kv.NewKvEvent(kv.OpPut, "e1", structpb.NewStringValue("v")),

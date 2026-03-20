@@ -28,6 +28,7 @@ message Token {
     uint64 log_offset = 2; // global seq of logs[0]
     uint64 min_applied = 3; // minimum applied seq number, 1-indexed. 0 means applied nothing.
     repeated KvEvent logs = 4;  // uncommitted log entries
+    uint64 timestamp = 5; // lamport timestamp, updated by each node before passing
 }
 
 // --- KV CRUD ---

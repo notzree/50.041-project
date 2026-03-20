@@ -25,6 +25,32 @@ type PeerConfig struct {
 	Addr string
 }
 
+// ParseRing parses "id1=addr1,id2=addr2" into PeerConfigs.
+// Addresses without a scheme get "http://" prepended.
+func ParseRing(s string) ([]PeerConfig, error) {
+	parts := strings.Split(s, ",")
+	peers := make([]PeerConfig, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		k, v, ok := strings.Cut(p, "=")
+		if !ok {
+			return nil, fmt.Errorf("expected id=addr, got %q", p)
+		}
+		addr := v
+		if !strings.HasPrefix(addr, "http://") && !strings.HasPrefix(addr, "https://") {
+			addr = "http://" + addr
+		}
+		peers = append(peers, PeerConfig{Id: k, Addr: addr})
+	}
+	if len(peers) == 0 {
+		return nil, fmt.Errorf("ring must have at least one peer")
+	}
+	return peers, nil
+}
+
 // NewRegistry builds a registry from a static config.
 // The order of ring determines the token-passing order.
 // selfId must be present in ring.

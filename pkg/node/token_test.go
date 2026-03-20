@@ -15,6 +15,7 @@ func TestTokenRoundtrip(t *testing.T) {
 		HolderId:   "node-1",
 		LogOffset:  5,
 		MinApplied: 3,
+		Timestamp:  42,
 		Logs: []*kv.KvEvent{
 			kv.NewKvEvent(kv.OpPut, "k1", structpb.NewStringValue("v1")),
 			kv.NewKvEvent(kv.OpDelete, "k2", nil),
@@ -28,6 +29,7 @@ func TestTokenRoundtrip(t *testing.T) {
 	assert.Equal(t, original.HolderId, restored.HolderId)
 	assert.Equal(t, original.LogOffset, restored.LogOffset)
 	assert.Equal(t, original.MinApplied, restored.MinApplied)
+	assert.Equal(t, original.Timestamp, restored.Timestamp)
 	require.Len(t, restored.Logs, 2)
 	assert.Equal(t, kv.OpPut, restored.Logs[0].Op)
 	assert.Equal(t, "k1", restored.Logs[0].Key)
