@@ -45,13 +45,22 @@ func NewNode(Id string, addr string, maxFlushCapacity int, ring []PeerConfig, ma
 	registry, err := NewRegistry(Id, ring)
 	if err != nil {
 		return nil, err
+
+	}
+	store := kv.NewKvStore()
+	logFile := fmt.Sprintf("%s.log", Id)
+	if err := store.OpenLog(logFile); err != nil {
+		// We log the error but allow the node to start in-memory if the file fails
+		log.Printf("Warning: Persistence failed for %s: %v", Id, err)
+	} else {
+		log.Printf("Persistence enabled for %s: writing to %s", Id, logFile)
 	}
 	return &Node{
 		Id:     Id,
 		addr:   addr,
 		manual: manual,
 		// todo: persistence upon crash recovery
-		kv:            kv.NewKvStore(),
+		kv:            store,
 		registry:      registry,
 		timestamp:     *NewLamportTimestamp(),
 		token:         make(chan *Token, 1),
@@ -114,15 +123,20 @@ func (n *Node) Start(ctx context.Context) error {
 // Returns the number of events flushed.
 func (n *Node) drainPendingInto(token *Token) int {
 	flushed := 0
+	var eventsToApply []*kv.KvEvent
 	for {
 		select {
 		case pe := <-n.pendingEvents:
 			token.Logs = append(token.Logs, pe.Event)
+			eventsToApply = append(eventsToApply, pe.Event)
 			n.lastApplied.Add(1)
 			pe.Done <- nil
 			flushed++
 		default:
-			return flushed
+			if len(eventsToApply) > 0 {
+				n.kv.ApplyLog(eventsToApply)
+			}
+			return flushed // The loop ends here when the queue is empty
 		}
 	}
 }

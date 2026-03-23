@@ -1,7 +1,10 @@
 package kv
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 
 	kvv1 "ds/v2/pkg/gen/kv/v1"
@@ -67,6 +70,7 @@ func KvEventFromProto(pb *kvv1.KvEvent) (*KvEvent, error) {
 type KvStore struct {
 	mu    sync.RWMutex
 	store map[string][]byte
+	wal   *os.File
 }
 
 func NewKvStore() *KvStore {
@@ -120,6 +124,17 @@ func (kv *KvStore) ApplyLog(events []*KvEvent) (int, error) {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 	for i, e := range events {
+		//adding some save to disk step
+		if kv.wal != nil {
+			fmt.Printf("--- WRITING TO DISK: Key=%s ---\n", e.Key)
+			bytes, _ := json.Marshal(e)
+			kv.wal.Write(bytes)
+			kv.wal.WriteString("\n")
+
+		} else {
+			//  WARNING: If you see this, the file isn't linked
+			fmt.Println("!!! CRITICAL: kv.wal is NIL - No data is being saved !!!")
+		}
 		switch e.Op {
 		case OpPut:
 			valueJson, err := e.Value.MarshalJSON()
@@ -131,5 +146,49 @@ func (kv *KvStore) ApplyLog(events []*KvEvent) (int, error) {
 			kv.delete(e.Key)
 		}
 	}
+	if kv.wal != nil {
+		kv.wal.Sync()
+	}
 	return len(events), nil
+}
+func (kv *KvStore) OpenLog(path string) error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	kv.wal = f
+
+	// Run the recovery to fill the map from the file
+	return kv.recover()
+}
+
+func (kv *KvStore) recover() error {
+	// 1. Go to the very beginning of the file
+	if _, err := kv.wal.Seek(0, 0); err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(kv.wal)
+	for scanner.Scan() {
+		var e KvEvent
+		// 2. Decode each line from JSON back into a KvEvent struct
+		if err := json.Unmarshal(scanner.Bytes(), &e); err != nil {
+			continue
+		}
+
+		// 3. Apply to map
+		if e.Op == OpPut {
+			valueJson, _ := e.Value.MarshalJSON()
+			kv.put(e.Key, valueJson)
+		} else if e.Op == OpDelete {
+			kv.delete(e.Key)
+		}
+	}
+
+	// 4. Move the file cursor back to end
+	_, err := kv.wal.Seek(0, 2)
+	return err
 }

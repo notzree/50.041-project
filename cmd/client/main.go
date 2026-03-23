@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	kvv1 "ds/v2/pkg/gen/kv/v1"
@@ -69,6 +70,7 @@ func main() {
 	fmt.Println("  delete <key> [node-id]         - Queue a delete (blocks until tick flushes)")
 	fmt.Println("  tick                           - Advance token (sent to all nodes)")
 	fmt.Println("  status                         - Show all node states")
+	fmt.Println("  monitor           - Real-time dashboard of the token ring")
 	fmt.Println("  exit")
 	fmt.Println()
 
@@ -96,7 +98,8 @@ func main() {
 
 		case "status":
 			doStatus(ctx, httpCli, peers)
-
+		case "monitor":
+			doMonitor(ctx, httpCli, peers)
 		case "put":
 			if len(args) < 3 {
 				fmt.Println("usage: put <key> <value> [node-id]")
@@ -245,3 +248,61 @@ func doStatus(ctx context.Context, httpCli *http.Client, peers []peer) {
 	}
 }
 
+func doMonitor(ctx context.Context, httpCli *http.Client, peers []peer) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	fmt.Println("Entering Monitor Mode... (Press Ctrl+C to exit client)")
+
+	for {
+		select {
+		case <-ticker.C:
+
+			fmt.Print("\033[H\033[2J")
+			fmt.Printf("=== TOKEN RING MONITOR | %s ===\n\n", time.Now().Format("15:04:05"))
+
+			var ringVisual []string
+
+			w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
+			fmt.Fprintln(w, "NODE ID\tTOKEN\tLAST APPLIED\tTIMESTAMP\tSTATUS")
+
+			for _, p := range peers {
+				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, p.addr+"/status", nil)
+				resp, err := httpCli.Do(req)
+
+				if err != nil {
+					ringVisual = append(ringVisual, fmt.Sprintf("[Offline] %s", p.id))
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", p.id, "-", "-", "-", "OFFLINE")
+					continue
+				}
+
+				body, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				var res map[string]any
+				json.Unmarshal(body, &res)
+
+				hasToken, _ := res["has_token"].(bool)
+				lastApp, _ := res["last_applied"].(float64)
+				ts, _ := res["timestamp"].(float64)
+
+				tokenStatus := "[ ]"
+				tokenText := "no"
+				if hasToken {
+					tokenStatus = "[●]"
+					tokenText = "YES"
+				}
+
+				ringVisual = append(ringVisual, fmt.Sprintf("%s %s", tokenStatus, p.id))
+				fmt.Fprintf(w, "%s\t%s\t%.0f\t%.0f\t%s\n", p.id, tokenText, lastApp, ts, "ONLINE")
+			}
+
+			fmt.Println(strings.Join(ringVisual, "  -->  "))
+			fmt.Println("\nNode Details:")
+			w.Flush() //  prints the table
+			fmt.Println("\nNote: Commands are disabled in Monitor Mode. Open a second terminal to send 'put' commands.")
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
