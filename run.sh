@@ -77,3 +77,4 @@ docker compose up --build -d
 echo ""
 echo "Connect with:"
 echo "  go run ./cmd/client --nodes \"${CLIENT_NODES}\""
+go run ./cmd/client --nodes "${CLIENT_NODES}"

@@ -28,6 +28,7 @@ delete <key> [node-id]        Delete a key (blocks until tick flushes)
 tick                          Advance token one hop
 status                        Show all node states
 exit                          Quit
+enable-paxos                  Tells all node to go to paxos mode, only coordinator will process put commands
 ```
 
 ## Example Session
@@ -70,7 +71,4 @@ go run . --id=node-1 --addr=:8080 --ring="node-1=localhost:8080,node-2=localhost
 ## TODOs
 
 - **Persistence**: write-ahead log or snapshot for crash recovery
-- **Leader election**: currently the lowest-ID node seeds the token; needs proper election on node failure
-- **Failure detection**: detect crashed nodes and skip them in the ring
-- **Dynamic membership**: `Join`/`Leave` RPCs are stubbed but not implemented
-- **Token loss recovery**: if the token is lost (holder crashes mid-pass), regenerate it
+go run ./cmd/client --nodes "node-1=localhost:8080,node-2=localhost:8081,node-3=localhost:8082,node-4=localhost:8083,node-5=localhost:8084"

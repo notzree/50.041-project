@@ -46,10 +46,25 @@ const (
 	// TokenServiceReceiveTokenProcedure is the fully-qualified name of the TokenService's ReceiveToken
 	// RPC.
 	TokenServiceReceiveTokenProcedure = "/kv.v1.TokenService/ReceiveToken"
+	// TokenServiceSeenTokenProcedure is the fully-qualified name of the TokenService's SeenToken RPC.
+	TokenServiceSeenTokenProcedure = "/kv.v1.TokenService/SeenToken"
 	// RingServiceJoinProcedure is the fully-qualified name of the RingService's Join RPC.
 	RingServiceJoinProcedure = "/kv.v1.RingService/Join"
 	// RingServiceLeaveProcedure is the fully-qualified name of the RingService's Leave RPC.
 	RingServiceLeaveProcedure = "/kv.v1.RingService/Leave"
+	// RingServiceReceiveElectionRequestProcedure is the fully-qualified name of the RingService's
+	// ReceiveElectionRequest RPC.
+	RingServiceReceiveElectionRequestProcedure = "/kv.v1.RingService/ReceiveElectionRequest"
+	// RingServiceReceivePrepareProposalRoundProcedure is the fully-qualified name of the RingService's
+	// ReceivePrepareProposalRound RPC.
+	RingServiceReceivePrepareProposalRoundProcedure = "/kv.v1.RingService/ReceivePrepareProposalRound"
+	// RingServiceReceiveProposalRoundChangeProcedure is the fully-qualified name of the RingService's
+	// ReceiveProposalRoundChange RPC.
+	RingServiceReceiveProposalRoundChangeProcedure = "/kv.v1.RingService/ReceiveProposalRoundChange"
+	// RingServicePingProcedure is the fully-qualified name of the RingService's Ping RPC.
+	RingServicePingProcedure = "/kv.v1.RingService/Ping"
+	// RingServiceSetPeersProcedure is the fully-qualified name of the RingService's SetPeers RPC.
+	RingServiceSetPeersProcedure = "/kv.v1.RingService/SetPeers"
 )
 
 // KvServiceClient is a client for the kv.v1.KvService service.
@@ -190,6 +205,7 @@ func (UnimplementedKvServiceHandler) Delete(context.Context, *v1.DeleteRequest) 
 type TokenServiceClient interface {
 	// called by predecessor to hand off the token
 	ReceiveToken(context.Context, *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error)
+	SeenToken(context.Context, *v1.SeenTokenRequest) (*v1.SeenTokenResponse, error)
 }
 
 // NewTokenServiceClient constructs a client for the kv.v1.TokenService service. By default, it uses
@@ -209,12 +225,19 @@ func NewTokenServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(tokenServiceMethods.ByName("ReceiveToken")),
 			connect.WithClientOptions(opts...),
 		),
+		seenToken: connect.NewClient[v1.SeenTokenRequest, v1.SeenTokenResponse](
+			httpClient,
+			baseURL+TokenServiceSeenTokenProcedure,
+			connect.WithSchema(tokenServiceMethods.ByName("SeenToken")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // tokenServiceClient implements TokenServiceClient.
 type tokenServiceClient struct {
 	receiveToken *connect.Client[v1.ReceiveTokenRequest, v1.ReceiveTokenResponse]
+	seenToken    *connect.Client[v1.SeenTokenRequest, v1.SeenTokenResponse]
 }
 
 // ReceiveToken calls kv.v1.TokenService.ReceiveToken.
@@ -226,10 +249,20 @@ func (c *tokenServiceClient) ReceiveToken(ctx context.Context, req *v1.ReceiveTo
 	return nil, err
 }
 
+// SeenToken calls kv.v1.TokenService.SeenToken.
+func (c *tokenServiceClient) SeenToken(ctx context.Context, req *v1.SeenTokenRequest) (*v1.SeenTokenResponse, error) {
+	response, err := c.seenToken.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // TokenServiceHandler is an implementation of the kv.v1.TokenService service.
 type TokenServiceHandler interface {
 	// called by predecessor to hand off the token
 	ReceiveToken(context.Context, *v1.ReceiveTokenRequest) (*v1.ReceiveTokenResponse, error)
+	SeenToken(context.Context, *v1.SeenTokenRequest) (*v1.SeenTokenResponse, error)
 }
 
 // NewTokenServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -245,10 +278,18 @@ func NewTokenServiceHandler(svc TokenServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(tokenServiceMethods.ByName("ReceiveToken")),
 		connect.WithHandlerOptions(opts...),
 	)
+	tokenServiceSeenTokenHandler := connect.NewUnaryHandlerSimple(
+		TokenServiceSeenTokenProcedure,
+		svc.SeenToken,
+		connect.WithSchema(tokenServiceMethods.ByName("SeenToken")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/kv.v1.TokenService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TokenServiceReceiveTokenProcedure:
 			tokenServiceReceiveTokenHandler.ServeHTTP(w, r)
+		case TokenServiceSeenTokenProcedure:
+			tokenServiceSeenTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -262,10 +303,19 @@ func (UnimplementedTokenServiceHandler) ReceiveToken(context.Context, *v1.Receiv
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.TokenService.ReceiveToken is not implemented"))
 }
 
+func (UnimplementedTokenServiceHandler) SeenToken(context.Context, *v1.SeenTokenRequest) (*v1.SeenTokenResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.TokenService.SeenToken is not implemented"))
+}
+
 // RingServiceClient is a client for the kv.v1.RingService service.
 type RingServiceClient interface {
 	Join(context.Context, *v1.JoinRequest) (*v1.JoinResponse, error)
 	Leave(context.Context, *v1.LeaveRequest) (*v1.LeaveResponse, error)
+	ReceiveElectionRequest(context.Context, *v1.ElectionRequest) (*v1.ElectionResponse, error)
+	ReceivePrepareProposalRound(context.Context, *v1.ReceivePrepareProposalRoundRequest) (*v1.ReceivePrepareProposalRoundResponse, error)
+	ReceiveProposalRoundChange(context.Context, *v1.ReceiveProposalRoundChangeRequest) (*v1.ReceiveProposalRoundChangeResponse, error)
+	Ping(context.Context, *v1.PingRequest) (*v1.PingResponse, error)
+	SetPeers(context.Context, *v1.SetPeersRequest) (*v1.SetPeersResponse, error)
 }
 
 // NewRingServiceClient constructs a client for the kv.v1.RingService service. By default, it uses
@@ -291,13 +341,48 @@ func NewRingServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(ringServiceMethods.ByName("Leave")),
 			connect.WithClientOptions(opts...),
 		),
+		receiveElectionRequest: connect.NewClient[v1.ElectionRequest, v1.ElectionResponse](
+			httpClient,
+			baseURL+RingServiceReceiveElectionRequestProcedure,
+			connect.WithSchema(ringServiceMethods.ByName("ReceiveElectionRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		receivePrepareProposalRound: connect.NewClient[v1.ReceivePrepareProposalRoundRequest, v1.ReceivePrepareProposalRoundResponse](
+			httpClient,
+			baseURL+RingServiceReceivePrepareProposalRoundProcedure,
+			connect.WithSchema(ringServiceMethods.ByName("ReceivePrepareProposalRound")),
+			connect.WithClientOptions(opts...),
+		),
+		receiveProposalRoundChange: connect.NewClient[v1.ReceiveProposalRoundChangeRequest, v1.ReceiveProposalRoundChangeResponse](
+			httpClient,
+			baseURL+RingServiceReceiveProposalRoundChangeProcedure,
+			connect.WithSchema(ringServiceMethods.ByName("ReceiveProposalRoundChange")),
+			connect.WithClientOptions(opts...),
+		),
+		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+RingServicePingProcedure,
+			connect.WithSchema(ringServiceMethods.ByName("Ping")),
+			connect.WithClientOptions(opts...),
+		),
+		setPeers: connect.NewClient[v1.SetPeersRequest, v1.SetPeersResponse](
+			httpClient,
+			baseURL+RingServiceSetPeersProcedure,
+			connect.WithSchema(ringServiceMethods.ByName("SetPeers")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // ringServiceClient implements RingServiceClient.
 type ringServiceClient struct {
-	join  *connect.Client[v1.JoinRequest, v1.JoinResponse]
-	leave *connect.Client[v1.LeaveRequest, v1.LeaveResponse]
+	join                        *connect.Client[v1.JoinRequest, v1.JoinResponse]
+	leave                       *connect.Client[v1.LeaveRequest, v1.LeaveResponse]
+	receiveElectionRequest      *connect.Client[v1.ElectionRequest, v1.ElectionResponse]
+	receivePrepareProposalRound *connect.Client[v1.ReceivePrepareProposalRoundRequest, v1.ReceivePrepareProposalRoundResponse]
+	receiveProposalRoundChange  *connect.Client[v1.ReceiveProposalRoundChangeRequest, v1.ReceiveProposalRoundChangeResponse]
+	ping                        *connect.Client[v1.PingRequest, v1.PingResponse]
+	setPeers                    *connect.Client[v1.SetPeersRequest, v1.SetPeersResponse]
 }
 
 // Join calls kv.v1.RingService.Join.
@@ -318,10 +403,60 @@ func (c *ringServiceClient) Leave(ctx context.Context, req *v1.LeaveRequest) (*v
 	return nil, err
 }
 
+// ReceiveElectionRequest calls kv.v1.RingService.ReceiveElectionRequest.
+func (c *ringServiceClient) ReceiveElectionRequest(ctx context.Context, req *v1.ElectionRequest) (*v1.ElectionResponse, error) {
+	response, err := c.receiveElectionRequest.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// ReceivePrepareProposalRound calls kv.v1.RingService.ReceivePrepareProposalRound.
+func (c *ringServiceClient) ReceivePrepareProposalRound(ctx context.Context, req *v1.ReceivePrepareProposalRoundRequest) (*v1.ReceivePrepareProposalRoundResponse, error) {
+	response, err := c.receivePrepareProposalRound.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// ReceiveProposalRoundChange calls kv.v1.RingService.ReceiveProposalRoundChange.
+func (c *ringServiceClient) ReceiveProposalRoundChange(ctx context.Context, req *v1.ReceiveProposalRoundChangeRequest) (*v1.ReceiveProposalRoundChangeResponse, error) {
+	response, err := c.receiveProposalRoundChange.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// Ping calls kv.v1.RingService.Ping.
+func (c *ringServiceClient) Ping(ctx context.Context, req *v1.PingRequest) (*v1.PingResponse, error) {
+	response, err := c.ping.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// SetPeers calls kv.v1.RingService.SetPeers.
+func (c *ringServiceClient) SetPeers(ctx context.Context, req *v1.SetPeersRequest) (*v1.SetPeersResponse, error) {
+	response, err := c.setPeers.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
 // RingServiceHandler is an implementation of the kv.v1.RingService service.
 type RingServiceHandler interface {
 	Join(context.Context, *v1.JoinRequest) (*v1.JoinResponse, error)
 	Leave(context.Context, *v1.LeaveRequest) (*v1.LeaveResponse, error)
+	ReceiveElectionRequest(context.Context, *v1.ElectionRequest) (*v1.ElectionResponse, error)
+	ReceivePrepareProposalRound(context.Context, *v1.ReceivePrepareProposalRoundRequest) (*v1.ReceivePrepareProposalRoundResponse, error)
+	ReceiveProposalRoundChange(context.Context, *v1.ReceiveProposalRoundChangeRequest) (*v1.ReceiveProposalRoundChangeResponse, error)
+	Ping(context.Context, *v1.PingRequest) (*v1.PingResponse, error)
+	SetPeers(context.Context, *v1.SetPeersRequest) (*v1.SetPeersResponse, error)
 }
 
 // NewRingServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -343,12 +478,52 @@ func NewRingServiceHandler(svc RingServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(ringServiceMethods.ByName("Leave")),
 		connect.WithHandlerOptions(opts...),
 	)
+	ringServiceReceiveElectionRequestHandler := connect.NewUnaryHandlerSimple(
+		RingServiceReceiveElectionRequestProcedure,
+		svc.ReceiveElectionRequest,
+		connect.WithSchema(ringServiceMethods.ByName("ReceiveElectionRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	ringServiceReceivePrepareProposalRoundHandler := connect.NewUnaryHandlerSimple(
+		RingServiceReceivePrepareProposalRoundProcedure,
+		svc.ReceivePrepareProposalRound,
+		connect.WithSchema(ringServiceMethods.ByName("ReceivePrepareProposalRound")),
+		connect.WithHandlerOptions(opts...),
+	)
+	ringServiceReceiveProposalRoundChangeHandler := connect.NewUnaryHandlerSimple(
+		RingServiceReceiveProposalRoundChangeProcedure,
+		svc.ReceiveProposalRoundChange,
+		connect.WithSchema(ringServiceMethods.ByName("ReceiveProposalRoundChange")),
+		connect.WithHandlerOptions(opts...),
+	)
+	ringServicePingHandler := connect.NewUnaryHandlerSimple(
+		RingServicePingProcedure,
+		svc.Ping,
+		connect.WithSchema(ringServiceMethods.ByName("Ping")),
+		connect.WithHandlerOptions(opts...),
+	)
+	ringServiceSetPeersHandler := connect.NewUnaryHandlerSimple(
+		RingServiceSetPeersProcedure,
+		svc.SetPeers,
+		connect.WithSchema(ringServiceMethods.ByName("SetPeers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/kv.v1.RingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RingServiceJoinProcedure:
 			ringServiceJoinHandler.ServeHTTP(w, r)
 		case RingServiceLeaveProcedure:
 			ringServiceLeaveHandler.ServeHTTP(w, r)
+		case RingServiceReceiveElectionRequestProcedure:
+			ringServiceReceiveElectionRequestHandler.ServeHTTP(w, r)
+		case RingServiceReceivePrepareProposalRoundProcedure:
+			ringServiceReceivePrepareProposalRoundHandler.ServeHTTP(w, r)
+		case RingServiceReceiveProposalRoundChangeProcedure:
+			ringServiceReceiveProposalRoundChangeHandler.ServeHTTP(w, r)
+		case RingServicePingProcedure:
+			ringServicePingHandler.ServeHTTP(w, r)
+		case RingServiceSetPeersProcedure:
+			ringServiceSetPeersHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -364,4 +539,24 @@ func (UnimplementedRingServiceHandler) Join(context.Context, *v1.JoinRequest) (*
 
 func (UnimplementedRingServiceHandler) Leave(context.Context, *v1.LeaveRequest) (*v1.LeaveResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.Leave is not implemented"))
+}
+
+func (UnimplementedRingServiceHandler) ReceiveElectionRequest(context.Context, *v1.ElectionRequest) (*v1.ElectionResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.ReceiveElectionRequest is not implemented"))
+}
+
+func (UnimplementedRingServiceHandler) ReceivePrepareProposalRound(context.Context, *v1.ReceivePrepareProposalRoundRequest) (*v1.ReceivePrepareProposalRoundResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.ReceivePrepareProposalRound is not implemented"))
+}
+
+func (UnimplementedRingServiceHandler) ReceiveProposalRoundChange(context.Context, *v1.ReceiveProposalRoundChangeRequest) (*v1.ReceiveProposalRoundChangeResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.ReceiveProposalRoundChange is not implemented"))
+}
+
+func (UnimplementedRingServiceHandler) Ping(context.Context, *v1.PingRequest) (*v1.PingResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.Ping is not implemented"))
+}
+
+func (UnimplementedRingServiceHandler) SetPeers(context.Context, *v1.SetPeersRequest) (*v1.SetPeersResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("kv.v1.RingService.SetPeers is not implemented"))
 }

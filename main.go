@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"ds/v2/pkg/node"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-
-	"ds/v2/pkg/node"
 )
 
 func main() {

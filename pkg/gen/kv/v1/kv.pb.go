@@ -75,7 +75,7 @@ func (KvEvent_Op) EnumDescriptor() ([]byte, []int) {
 type Node struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Address       string                 `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"` // host:port
+	Addr          string                 `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"` // host:port
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -117,9 +117,9 @@ func (x *Node) GetId() string {
 	return ""
 }
 
-func (x *Node) GetAddress() string {
+func (x *Node) GetAddr() string {
 	if x != nil {
-		return x.Address
+		return x.Addr
 	}
 	return ""
 }
@@ -657,10 +657,11 @@ func (x *JoinRequest) GetNode() *Node {
 }
 
 type JoinResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ring          []*Node                `protobuf:"bytes,1,rep,name=ring,proto3" json:"ring,omitempty"` // full ring so new node knows topology
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Ring           []*Node                `protobuf:"bytes,1,rep,name=ring,proto3" json:"ring,omitempty"` // full ring so new node knows topology
+	CoordinatorIdx int64                  `protobuf:"varint,2,opt,name=coordinator_idx,json=coordinatorIdx,proto3" json:"coordinator_idx,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *JoinResponse) Reset() {
@@ -698,6 +699,13 @@ func (x *JoinResponse) GetRing() []*Node {
 		return x.Ring
 	}
 	return nil
+}
+
+func (x *JoinResponse) GetCoordinatorIdx() int64 {
+	if x != nil {
+		return x.CoordinatorIdx
+	}
+	return 0
 }
 
 type LeaveRequest struct {
@@ -780,14 +788,575 @@ func (*LeaveResponse) Descriptor() ([]byte, []int) {
 	return file_kv_v1_kv_proto_rawDescGZIP(), []int{14}
 }
 
+type ElectionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ElectionRequest) Reset() {
+	*x = ElectionRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ElectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ElectionRequest) ProtoMessage() {}
+
+func (x *ElectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ElectionRequest.ProtoReflect.Descriptor instead.
+func (*ElectionRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ElectionRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type ElectionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ElectionResponse) Reset() {
+	*x = ElectionResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ElectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ElectionResponse) ProtoMessage() {}
+
+func (x *ElectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ElectionResponse.ProtoReflect.Descriptor instead.
+func (*ElectionResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ElectionResponse) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type ReceivePrepareProposalRoundRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Round         uint64                 `protobuf:"varint,1,opt,name=round,proto3" json:"round,omitempty"` // logical counter
+	RoundChanges  uint64                 `protobuf:"varint,2,opt,name=round_changes,json=roundChanges,proto3" json:"round_changes,omitempty"`
+	NodeId        string                 `protobuf:"bytes,3,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceivePrepareProposalRoundRequest) Reset() {
+	*x = ReceivePrepareProposalRoundRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivePrepareProposalRoundRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivePrepareProposalRoundRequest) ProtoMessage() {}
+
+func (x *ReceivePrepareProposalRoundRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivePrepareProposalRoundRequest.ProtoReflect.Descriptor instead.
+func (*ReceivePrepareProposalRoundRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ReceivePrepareProposalRoundRequest) GetRound() uint64 {
+	if x != nil {
+		return x.Round
+	}
+	return 0
+}
+
+func (x *ReceivePrepareProposalRoundRequest) GetRoundChanges() uint64 {
+	if x != nil {
+		return x.RoundChanges
+	}
+	return 0
+}
+
+func (x *ReceivePrepareProposalRoundRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type ReceivePrepareProposalRoundResponse struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Promised bool                   `protobuf:"varint,1,opt,name=promised,proto3" json:"promised,omitempty"`
+	// Previously accepted proposal (if any)
+	PrevAcceptedRound        uint64 `protobuf:"varint,2,opt,name=prev_accepted_round,json=prevAcceptedRound,proto3" json:"prev_accepted_round,omitempty"`
+	PrevAcceptedRoundChanges uint64 `protobuf:"varint,3,opt,name=prev_accepted_round_changes,json=prevAcceptedRoundChanges,proto3" json:"prev_accepted_round_changes,omitempty"`
+	PrevAcceptedNodeId       string `protobuf:"bytes,4,opt,name=prev_accepted_node_id,json=prevAcceptedNodeId,proto3" json:"prev_accepted_node_id,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *ReceivePrepareProposalRoundResponse) Reset() {
+	*x = ReceivePrepareProposalRoundResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceivePrepareProposalRoundResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceivePrepareProposalRoundResponse) ProtoMessage() {}
+
+func (x *ReceivePrepareProposalRoundResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceivePrepareProposalRoundResponse.ProtoReflect.Descriptor instead.
+func (*ReceivePrepareProposalRoundResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ReceivePrepareProposalRoundResponse) GetPromised() bool {
+	if x != nil {
+		return x.Promised
+	}
+	return false
+}
+
+func (x *ReceivePrepareProposalRoundResponse) GetPrevAcceptedRound() uint64 {
+	if x != nil {
+		return x.PrevAcceptedRound
+	}
+	return 0
+}
+
+func (x *ReceivePrepareProposalRoundResponse) GetPrevAcceptedRoundChanges() uint64 {
+	if x != nil {
+		return x.PrevAcceptedRoundChanges
+	}
+	return 0
+}
+
+func (x *ReceivePrepareProposalRoundResponse) GetPrevAcceptedNodeId() string {
+	if x != nil {
+		return x.PrevAcceptedNodeId
+	}
+	return ""
+}
+
+type ReceiveProposalRoundChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Round         uint64                 `protobuf:"varint,2,opt,name=round,proto3" json:"round,omitempty"`
+	KvEvent       *KvEvent               `protobuf:"bytes,3,opt,name=kv_event,json=kvEvent,proto3" json:"kv_event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceiveProposalRoundChangeRequest) Reset() {
+	*x = ReceiveProposalRoundChangeRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceiveProposalRoundChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceiveProposalRoundChangeRequest) ProtoMessage() {}
+
+func (x *ReceiveProposalRoundChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceiveProposalRoundChangeRequest.ProtoReflect.Descriptor instead.
+func (*ReceiveProposalRoundChangeRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ReceiveProposalRoundChangeRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *ReceiveProposalRoundChangeRequest) GetRound() uint64 {
+	if x != nil {
+		return x.Round
+	}
+	return 0
+}
+
+func (x *ReceiveProposalRoundChangeRequest) GetKvEvent() *KvEvent {
+	if x != nil {
+		return x.KvEvent
+	}
+	return nil
+}
+
+type ReceiveProposalRoundChangeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReceiveProposalRoundChangeResponse) Reset() {
+	*x = ReceiveProposalRoundChangeResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReceiveProposalRoundChangeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReceiveProposalRoundChangeResponse) ProtoMessage() {}
+
+func (x *ReceiveProposalRoundChangeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReceiveProposalRoundChangeResponse.ProtoReflect.Descriptor instead.
+func (*ReceiveProposalRoundChangeResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{20}
+}
+
+type PingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *PingRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type PingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{22}
+}
+
+type SetPeersRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Nodes          []*Node                `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	CoordinatorIdx int64                  `protobuf:"varint,2,opt,name=coordinator_idx,json=coordinatorIdx,proto3" json:"coordinator_idx,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetPeersRequest) Reset() {
+	*x = SetPeersRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPeersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPeersRequest) ProtoMessage() {}
+
+func (x *SetPeersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPeersRequest.ProtoReflect.Descriptor instead.
+func (*SetPeersRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SetPeersRequest) GetNodes() []*Node {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
+func (x *SetPeersRequest) GetCoordinatorIdx() int64 {
+	if x != nil {
+		return x.CoordinatorIdx
+	}
+	return 0
+}
+
+type SetPeersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPeersResponse) Reset() {
+	*x = SetPeersResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPeersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPeersResponse) ProtoMessage() {}
+
+func (x *SetPeersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPeersResponse.ProtoReflect.Descriptor instead.
+func (*SetPeersResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{24}
+}
+
+type SeenTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SeenTokenRequest) Reset() {
+	*x = SeenTokenRequest{}
+	mi := &file_kv_v1_kv_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeenTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeenTokenRequest) ProtoMessage() {}
+
+func (x *SeenTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeenTokenRequest.ProtoReflect.Descriptor instead.
+func (*SeenTokenRequest) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{25}
+}
+
+type SeenTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Seen          bool                   `protobuf:"varint,1,opt,name=seen,proto3" json:"seen,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SeenTokenResponse) Reset() {
+	*x = SeenTokenResponse{}
+	mi := &file_kv_v1_kv_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeenTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeenTokenResponse) ProtoMessage() {}
+
+func (x *SeenTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_kv_v1_kv_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeenTokenResponse.ProtoReflect.Descriptor instead.
+func (*SeenTokenResponse) Descriptor() ([]byte, []int) {
+	return file_kv_v1_kv_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *SeenTokenResponse) GetSeen() bool {
+	if x != nil {
+		return x.Seen
+	}
+	return false
+}
+
 var File_kv_v1_kv_proto protoreflect.FileDescriptor
 
 const file_kv_v1_kv_proto_rawDesc = "" +
 	"\n" +
-	"\x0ekv/v1/kv.proto\x12\x05kv.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\"0\n" +
+	"\x0ekv/v1/kv.proto\x12\x05kv.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\"*\n" +
 	"\x04Node\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\aaddress\x18\x02 \x01(\tR\aaddress\"\xb3\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04addr\x18\x02 \x01(\tR\x04addr\"\xb3\x01\n" +
 	"\aKvEvent\x12!\n" +
 	"\x02op\x18\x01 \x01(\x0e2\x11.kv.v1.KvEvent.OpR\x02op\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12,\n" +
@@ -824,21 +1393,56 @@ const file_kv_v1_kv_proto_rawDesc = "" +
 	"\x05token\x18\x01 \x01(\v2\f.kv.v1.TokenR\x05token\"\x16\n" +
 	"\x14ReceiveTokenResponse\".\n" +
 	"\vJoinRequest\x12\x1f\n" +
-	"\x04node\x18\x01 \x01(\v2\v.kv.v1.NodeR\x04node\"/\n" +
+	"\x04node\x18\x01 \x01(\v2\v.kv.v1.NodeR\x04node\"X\n" +
 	"\fJoinResponse\x12\x1f\n" +
-	"\x04ring\x18\x01 \x03(\v2\v.kv.v1.NodeR\x04ring\"'\n" +
+	"\x04ring\x18\x01 \x03(\v2\v.kv.v1.NodeR\x04ring\x12'\n" +
+	"\x0fcoordinator_idx\x18\x02 \x01(\x03R\x0ecoordinatorIdx\"'\n" +
 	"\fLeaveRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\x0f\n" +
-	"\rLeaveResponse2\x9e\x01\n" +
+	"\rLeaveResponse\"*\n" +
+	"\x0fElectionRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"+\n" +
+	"\x10ElectionResponse\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"x\n" +
+	"\"ReceivePrepareProposalRoundRequest\x12\x14\n" +
+	"\x05round\x18\x01 \x01(\x04R\x05round\x12#\n" +
+	"\rround_changes\x18\x02 \x01(\x04R\froundChanges\x12\x17\n" +
+	"\anode_id\x18\x03 \x01(\tR\x06nodeId\"\xe3\x01\n" +
+	"#ReceivePrepareProposalRoundResponse\x12\x1a\n" +
+	"\bpromised\x18\x01 \x01(\bR\bpromised\x12.\n" +
+	"\x13prev_accepted_round\x18\x02 \x01(\x04R\x11prevAcceptedRound\x12=\n" +
+	"\x1bprev_accepted_round_changes\x18\x03 \x01(\x04R\x18prevAcceptedRoundChanges\x121\n" +
+	"\x15prev_accepted_node_id\x18\x04 \x01(\tR\x12prevAcceptedNodeId\"}\n" +
+	"!ReceiveProposalRoundChangeRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
+	"\x05round\x18\x02 \x01(\x04R\x05round\x12)\n" +
+	"\bkv_event\x18\x03 \x01(\v2\x0e.kv.v1.KvEventR\akvEvent\"$\n" +
+	"\"ReceiveProposalRoundChangeResponse\"&\n" +
+	"\vPingRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\x0e\n" +
+	"\fPingResponse\"]\n" +
+	"\x0fSetPeersRequest\x12!\n" +
+	"\x05nodes\x18\x01 \x03(\v2\v.kv.v1.NodeR\x05nodes\x12'\n" +
+	"\x0fcoordinator_idx\x18\x02 \x01(\x03R\x0ecoordinatorIdx\"\x12\n" +
+	"\x10SetPeersResponse\"\x12\n" +
+	"\x10SeenTokenRequest\"'\n" +
+	"\x11SeenTokenResponse\x12\x12\n" +
+	"\x04seen\x18\x01 \x01(\bR\x04seen2\x9e\x01\n" +
 	"\tKvService\x12,\n" +
 	"\x03Get\x12\x11.kv.v1.GetRequest\x1a\x12.kv.v1.GetResponse\x12,\n" +
 	"\x03Put\x12\x11.kv.v1.PutRequest\x1a\x12.kv.v1.PutResponse\x125\n" +
-	"\x06Delete\x12\x14.kv.v1.DeleteRequest\x1a\x15.kv.v1.DeleteResponse2W\n" +
+	"\x06Delete\x12\x14.kv.v1.DeleteRequest\x1a\x15.kv.v1.DeleteResponse2\x97\x01\n" +
 	"\fTokenService\x12G\n" +
-	"\fReceiveToken\x12\x1a.kv.v1.ReceiveTokenRequest\x1a\x1b.kv.v1.ReceiveTokenResponse2r\n" +
+	"\fReceiveToken\x12\x1a.kv.v1.ReceiveTokenRequest\x1a\x1b.kv.v1.ReceiveTokenResponse\x12>\n" +
+	"\tSeenToken\x12\x17.kv.v1.SeenTokenRequest\x1a\x18.kv.v1.SeenTokenResponse2\x94\x04\n" +
 	"\vRingService\x12/\n" +
 	"\x04Join\x12\x12.kv.v1.JoinRequest\x1a\x13.kv.v1.JoinResponse\x122\n" +
-	"\x05Leave\x12\x13.kv.v1.LeaveRequest\x1a\x14.kv.v1.LeaveResponseBc\n" +
+	"\x05Leave\x12\x13.kv.v1.LeaveRequest\x1a\x14.kv.v1.LeaveResponse\x12I\n" +
+	"\x16ReceiveElectionRequest\x12\x16.kv.v1.ElectionRequest\x1a\x17.kv.v1.ElectionResponse\x12t\n" +
+	"\x1bReceivePrepareProposalRound\x12).kv.v1.ReceivePrepareProposalRoundRequest\x1a*.kv.v1.ReceivePrepareProposalRoundResponse\x12q\n" +
+	"\x1aReceiveProposalRoundChange\x12(.kv.v1.ReceiveProposalRoundChangeRequest\x1a).kv.v1.ReceiveProposalRoundChangeResponse\x12/\n" +
+	"\x04Ping\x12\x12.kv.v1.PingRequest\x1a\x13.kv.v1.PingResponse\x12;\n" +
+	"\bSetPeers\x12\x16.kv.v1.SetPeersRequest\x1a\x17.kv.v1.SetPeersResponseBc\n" +
 	"\tcom.kv.v1B\aKvProtoP\x01Z\x18ds/v2/pkg/gen/kv/v1;kvv1\xa2\x02\x03KXX\xaa\x02\x05Kv.V1\xca\x02\x05Kv\\V1\xe2\x02\x11Kv\\V1\\GPBMetadata\xea\x02\x06Kv::V1b\x06proto3"
 
 var (
@@ -854,52 +1458,78 @@ func file_kv_v1_kv_proto_rawDescGZIP() []byte {
 }
 
 var file_kv_v1_kv_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_kv_v1_kv_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_kv_v1_kv_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_kv_v1_kv_proto_goTypes = []any{
-	(KvEvent_Op)(0),              // 0: kv.v1.KvEvent.Op
-	(*Node)(nil),                 // 1: kv.v1.Node
-	(*KvEvent)(nil),              // 2: kv.v1.KvEvent
-	(*Token)(nil),                // 3: kv.v1.Token
-	(*GetRequest)(nil),           // 4: kv.v1.GetRequest
-	(*GetResponse)(nil),          // 5: kv.v1.GetResponse
-	(*PutRequest)(nil),           // 6: kv.v1.PutRequest
-	(*PutResponse)(nil),          // 7: kv.v1.PutResponse
-	(*DeleteRequest)(nil),        // 8: kv.v1.DeleteRequest
-	(*DeleteResponse)(nil),       // 9: kv.v1.DeleteResponse
-	(*ReceiveTokenRequest)(nil),  // 10: kv.v1.ReceiveTokenRequest
-	(*ReceiveTokenResponse)(nil), // 11: kv.v1.ReceiveTokenResponse
-	(*JoinRequest)(nil),          // 12: kv.v1.JoinRequest
-	(*JoinResponse)(nil),         // 13: kv.v1.JoinResponse
-	(*LeaveRequest)(nil),         // 14: kv.v1.LeaveRequest
-	(*LeaveResponse)(nil),        // 15: kv.v1.LeaveResponse
-	(*structpb.Value)(nil),       // 16: google.protobuf.Value
+	(KvEvent_Op)(0),                             // 0: kv.v1.KvEvent.Op
+	(*Node)(nil),                                // 1: kv.v1.Node
+	(*KvEvent)(nil),                             // 2: kv.v1.KvEvent
+	(*Token)(nil),                               // 3: kv.v1.Token
+	(*GetRequest)(nil),                          // 4: kv.v1.GetRequest
+	(*GetResponse)(nil),                         // 5: kv.v1.GetResponse
+	(*PutRequest)(nil),                          // 6: kv.v1.PutRequest
+	(*PutResponse)(nil),                         // 7: kv.v1.PutResponse
+	(*DeleteRequest)(nil),                       // 8: kv.v1.DeleteRequest
+	(*DeleteResponse)(nil),                      // 9: kv.v1.DeleteResponse
+	(*ReceiveTokenRequest)(nil),                 // 10: kv.v1.ReceiveTokenRequest
+	(*ReceiveTokenResponse)(nil),                // 11: kv.v1.ReceiveTokenResponse
+	(*JoinRequest)(nil),                         // 12: kv.v1.JoinRequest
+	(*JoinResponse)(nil),                        // 13: kv.v1.JoinResponse
+	(*LeaveRequest)(nil),                        // 14: kv.v1.LeaveRequest
+	(*LeaveResponse)(nil),                       // 15: kv.v1.LeaveResponse
+	(*ElectionRequest)(nil),                     // 16: kv.v1.ElectionRequest
+	(*ElectionResponse)(nil),                    // 17: kv.v1.ElectionResponse
+	(*ReceivePrepareProposalRoundRequest)(nil),  // 18: kv.v1.ReceivePrepareProposalRoundRequest
+	(*ReceivePrepareProposalRoundResponse)(nil), // 19: kv.v1.ReceivePrepareProposalRoundResponse
+	(*ReceiveProposalRoundChangeRequest)(nil),   // 20: kv.v1.ReceiveProposalRoundChangeRequest
+	(*ReceiveProposalRoundChangeResponse)(nil),  // 21: kv.v1.ReceiveProposalRoundChangeResponse
+	(*PingRequest)(nil),                         // 22: kv.v1.PingRequest
+	(*PingResponse)(nil),                        // 23: kv.v1.PingResponse
+	(*SetPeersRequest)(nil),                     // 24: kv.v1.SetPeersRequest
+	(*SetPeersResponse)(nil),                    // 25: kv.v1.SetPeersResponse
+	(*SeenTokenRequest)(nil),                    // 26: kv.v1.SeenTokenRequest
+	(*SeenTokenResponse)(nil),                   // 27: kv.v1.SeenTokenResponse
+	(*structpb.Value)(nil),                      // 28: google.protobuf.Value
 }
 var file_kv_v1_kv_proto_depIdxs = []int32{
 	0,  // 0: kv.v1.KvEvent.op:type_name -> kv.v1.KvEvent.Op
-	16, // 1: kv.v1.KvEvent.value:type_name -> google.protobuf.Value
+	28, // 1: kv.v1.KvEvent.value:type_name -> google.protobuf.Value
 	2,  // 2: kv.v1.Token.logs:type_name -> kv.v1.KvEvent
-	16, // 3: kv.v1.GetResponse.value:type_name -> google.protobuf.Value
-	16, // 4: kv.v1.PutRequest.value:type_name -> google.protobuf.Value
+	28, // 3: kv.v1.GetResponse.value:type_name -> google.protobuf.Value
+	28, // 4: kv.v1.PutRequest.value:type_name -> google.protobuf.Value
 	3,  // 5: kv.v1.ReceiveTokenRequest.token:type_name -> kv.v1.Token
 	1,  // 6: kv.v1.JoinRequest.node:type_name -> kv.v1.Node
 	1,  // 7: kv.v1.JoinResponse.ring:type_name -> kv.v1.Node
-	4,  // 8: kv.v1.KvService.Get:input_type -> kv.v1.GetRequest
-	6,  // 9: kv.v1.KvService.Put:input_type -> kv.v1.PutRequest
-	8,  // 10: kv.v1.KvService.Delete:input_type -> kv.v1.DeleteRequest
-	10, // 11: kv.v1.TokenService.ReceiveToken:input_type -> kv.v1.ReceiveTokenRequest
-	12, // 12: kv.v1.RingService.Join:input_type -> kv.v1.JoinRequest
-	14, // 13: kv.v1.RingService.Leave:input_type -> kv.v1.LeaveRequest
-	5,  // 14: kv.v1.KvService.Get:output_type -> kv.v1.GetResponse
-	7,  // 15: kv.v1.KvService.Put:output_type -> kv.v1.PutResponse
-	9,  // 16: kv.v1.KvService.Delete:output_type -> kv.v1.DeleteResponse
-	11, // 17: kv.v1.TokenService.ReceiveToken:output_type -> kv.v1.ReceiveTokenResponse
-	13, // 18: kv.v1.RingService.Join:output_type -> kv.v1.JoinResponse
-	15, // 19: kv.v1.RingService.Leave:output_type -> kv.v1.LeaveResponse
-	14, // [14:20] is the sub-list for method output_type
-	8,  // [8:14] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	2,  // 8: kv.v1.ReceiveProposalRoundChangeRequest.kv_event:type_name -> kv.v1.KvEvent
+	1,  // 9: kv.v1.SetPeersRequest.nodes:type_name -> kv.v1.Node
+	4,  // 10: kv.v1.KvService.Get:input_type -> kv.v1.GetRequest
+	6,  // 11: kv.v1.KvService.Put:input_type -> kv.v1.PutRequest
+	8,  // 12: kv.v1.KvService.Delete:input_type -> kv.v1.DeleteRequest
+	10, // 13: kv.v1.TokenService.ReceiveToken:input_type -> kv.v1.ReceiveTokenRequest
+	26, // 14: kv.v1.TokenService.SeenToken:input_type -> kv.v1.SeenTokenRequest
+	12, // 15: kv.v1.RingService.Join:input_type -> kv.v1.JoinRequest
+	14, // 16: kv.v1.RingService.Leave:input_type -> kv.v1.LeaveRequest
+	16, // 17: kv.v1.RingService.ReceiveElectionRequest:input_type -> kv.v1.ElectionRequest
+	18, // 18: kv.v1.RingService.ReceivePrepareProposalRound:input_type -> kv.v1.ReceivePrepareProposalRoundRequest
+	20, // 19: kv.v1.RingService.ReceiveProposalRoundChange:input_type -> kv.v1.ReceiveProposalRoundChangeRequest
+	22, // 20: kv.v1.RingService.Ping:input_type -> kv.v1.PingRequest
+	24, // 21: kv.v1.RingService.SetPeers:input_type -> kv.v1.SetPeersRequest
+	5,  // 22: kv.v1.KvService.Get:output_type -> kv.v1.GetResponse
+	7,  // 23: kv.v1.KvService.Put:output_type -> kv.v1.PutResponse
+	9,  // 24: kv.v1.KvService.Delete:output_type -> kv.v1.DeleteResponse
+	11, // 25: kv.v1.TokenService.ReceiveToken:output_type -> kv.v1.ReceiveTokenResponse
+	27, // 26: kv.v1.TokenService.SeenToken:output_type -> kv.v1.SeenTokenResponse
+	13, // 27: kv.v1.RingService.Join:output_type -> kv.v1.JoinResponse
+	15, // 28: kv.v1.RingService.Leave:output_type -> kv.v1.LeaveResponse
+	17, // 29: kv.v1.RingService.ReceiveElectionRequest:output_type -> kv.v1.ElectionResponse
+	19, // 30: kv.v1.RingService.ReceivePrepareProposalRound:output_type -> kv.v1.ReceivePrepareProposalRoundResponse
+	21, // 31: kv.v1.RingService.ReceiveProposalRoundChange:output_type -> kv.v1.ReceiveProposalRoundChangeResponse
+	23, // 32: kv.v1.RingService.Ping:output_type -> kv.v1.PingResponse
+	25, // 33: kv.v1.RingService.SetPeers:output_type -> kv.v1.SetPeersResponse
+	22, // [22:34] is the sub-list for method output_type
+	10, // [10:22] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_kv_v1_kv_proto_init() }
@@ -913,7 +1543,7 @@ func file_kv_v1_kv_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_kv_v1_kv_proto_rawDesc), len(file_kv_v1_kv_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

@@ -71,6 +71,7 @@ func main() {
 	fmt.Println("  tick                           - Advance token (sent to all nodes)")
 	fmt.Println("  status                         - Show all node states")
 	fmt.Println("  monitor           - Real-time dashboard of the token ring")
+	fmt.Println("  enable-paxos")
 	fmt.Println("  exit")
 	fmt.Println()
 
@@ -100,6 +101,8 @@ func main() {
 			doStatus(ctx, httpCli, peers)
 		case "monitor":
 			doMonitor(ctx, httpCli, peers)
+		case "enable-paxos":
+			doEnablePaxos(ctx, httpCli, peers)
 		case "put":
 			if len(args) < 3 {
 				fmt.Println("usage: put <key> <value> [node-id]")
@@ -243,8 +246,8 @@ func doStatus(ctx context.Context, httpCli *http.Client, peers []peer) {
 
 		var result map[string]any
 		json.Unmarshal(body, &result)
-		fmt.Printf("  %s: token=%v last_applied=%.0f timestamp=%.0f\n",
-			p.id, result["has_token"], result["last_applied"], result["timestamp"])
+		pretty, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Printf("  %s:\n%s\n", p.id, pretty)
 	}
 }
 
@@ -304,5 +307,23 @@ func doMonitor(ctx context.Context, httpCli *http.Client, peers []peer) {
 		case <-ctx.Done():
 			return
 		}
+	}
+}
+
+func doEnablePaxos(ctx context.Context, httpCli *http.Client, peers []peer) {
+	for _, p := range peers {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, p.addr+"/enable-paxos", nil)
+		resp, err := httpCli.Do(req)
+		if err != nil {
+			fmt.Printf("  %s: error: %v\n", p.id, err)
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		var result map[string]any
+		json.Unmarshal(body, &result)
+		pretty, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Printf("  %s:\n%s\n", p.id, pretty)
 	}
 }

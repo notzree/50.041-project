@@ -8,7 +8,7 @@ import "google/protobuf/struct.proto";
 
 message Node {
   string id = 1;
-  string address = 2; // host:port
+  string addr = 2; // host:port
 }
 
 message KvEvent {
@@ -66,12 +66,57 @@ message JoinRequest {
 }
 message JoinResponse {
   repeated Node ring = 1; // full ring so new node knows topology
+  int64 coordinator_idx = 2;
 }
 
 message LeaveRequest {
   string node_id = 1;
 }
 message LeaveResponse {}
+
+message ElectionRequest {
+  string node_id = 1;
+}
+message ElectionResponse {
+  string node_id = 1;
+}
+
+message ReceivePrepareProposalRoundRequest {
+  uint64 round = 1;     // logical counter
+  uint64 round_changes = 2;
+  string node_id = 3;
+}
+message ReceivePrepareProposalRoundResponse {
+  bool promised = 1;
+
+  // Previously accepted proposal (if any)
+  uint64 prev_accepted_round = 2;
+  uint64 prev_accepted_round_changes = 3;
+  string prev_accepted_node_id = 4;
+}
+
+message ReceiveProposalRoundChangeRequest {
+  string node_id = 1;
+  uint64 round = 2;
+  KvEvent kv_event = 3;
+}
+message ReceiveProposalRoundChangeResponse {}
+
+message PingRequest {
+  string node_id = 1;
+}
+message PingResponse {}
+
+message SetPeersRequest {
+  repeated Node nodes = 1;
+  int64 coordinator_idx = 2;
+}
+message SetPeersResponse {}
+
+message SeenTokenRequest {}
+message SeenTokenResponse {
+  bool seen = 1;
+}
 
 // --- Services ---
 
@@ -84,9 +129,15 @@ service KvService {
 service TokenService {
   // called by predecessor to hand off the token
   rpc ReceiveToken(ReceiveTokenRequest) returns (ReceiveTokenResponse);
+  rpc SeenToken(SeenTokenRequest) returns (SeenTokenResponse);
 }
 
 service RingService {
-  rpc Join(JoinRequest) returns (JoinResponse);
-  rpc Leave(LeaveRequest) returns (LeaveResponse);
+  rpc Join(JoinRequest) returns (JoinResponse); // Called on a node by new node that wants to join the ring
+  rpc Leave(LeaveRequest) returns (LeaveResponse); // Called on all nodes or 1 node by node that wants to leave the ring
+  rpc ReceiveElectionRequest(ElectionRequest) returns (ElectionResponse);
+  rpc ReceivePrepareProposalRound(ReceivePrepareProposalRoundRequest) returns (ReceivePrepareProposalRoundResponse);
+  rpc ReceiveProposalRoundChange(ReceiveProposalRoundChangeRequest) returns (ReceiveProposalRoundChangeResponse);
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc SetPeers(SetPeersRequest) returns (SetPeersResponse);
 }
